@@ -1,7 +1,9 @@
 import numpy as np
 import torch
-from torch.nn import LSTM, Sequential, Linear
+from torch.nn import LSTM, Sequential, Linear, Dropout
 import torch.optim as optim
+from read_data import NTUDataSet
+from torch.utils import data
 
 class STALSTM(torch.nn.Module):
     def __init__(self, input_size, hidden_size):
@@ -9,9 +11,9 @@ class STALSTM(torch.nn.Module):
 
         self.mainlstm = LSTM(input_size, hidden_size, 3, bidirectional=True)
         self.salstm = LSTM(input_size, hidden_size, bidirectional=True)
-        self.safc1 =  Linear(hidden_size, hidden_size)
-        self.safc2 = Linear(hidden_size, input_size[0].size(1))
-        self.mainfc1 = Linear(hidden_size, hidden_size)
+        self.safc = Sequential(Linear(hidden_size, hidden_size), torch.tanh(), Dropout(),
+                               Linear(hidden_size, input_size[0].size(1)), Dropout())
+        self.mainfc = Sequential(Linear(hidden_size, hidden_size), Dropout())
         #body part for NTU RGB+D
         self.body_part_size = 8
         self.body_part_index = [{}]
@@ -22,7 +24,7 @@ class STALSTM(torch.nn.Module):
         sa_output, (sa_hn, sa_cn) = self.salstm(input, hx)
         alpha = []
         for i in range(sa_hn.size(1)):
-            normalize_input = torch.exp(self.safc2(torch.tanh(self.safc1(sa_hn[:,i,:]))))
+            normalize_input = torch.exp(self.safc(sa_hn[:, i, :]))
             normalize_input /= normalize_input.sum()
             selected = {}
             for j, x in enumerate(normalize_input):
@@ -33,9 +35,6 @@ class STALSTM(torch.nn.Module):
             for j, subset in enumerate(self.body_part_index):
                 if selected & subset is not []:
                     inter_id = selected.intersection(subset)
-                    #set_id = [list(self.body_part_index[j]).index(id) for id in inter_id]
-                    #selected_id = [list(selected).index(id) for id in inter_id]
-                    #inter_value = [selected_value[i] for i in selected_id]
                     for t, sel_item in enumerate(selected):
                         if sel_item in inter_id:
                             self.body_part_value[j][sel_item] += selected_value[sel_item]
@@ -63,7 +62,7 @@ class STALSTM(torch.nn.Module):
 
         input *= alpha
         main_output, (hn, cn) = self.mainlstm(input, x)
-        output = self.mainfc1(hn)
+        output = self.mainfc(hn)
 
         return output
 
@@ -78,8 +77,17 @@ class STALoss(torch.nn.Module):
         corssen_loss = crossen(output, truth)
 
 
-if __name__ == '__main__':
-    pass
+for epoch in range(1000):
+    model = STALSTM().cuda()
+    loss = torch.nn.CrossEntropyLoss().cuda()
+    optimizer = optim.Adam(model.parameters())
+
+    train_data = NTUDataSet()
+    train_loader = data.DataLoader(train_data, batch_size=256, shuffle=True, num_workers=1)
+
+    for batch_idx, train_batch in enumerate(train_loader):
+
+
 
 
 
