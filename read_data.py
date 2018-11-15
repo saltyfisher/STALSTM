@@ -4,50 +4,22 @@ import torch.utils.data as data
 import pandas as pd
 import numpy as np
 import pickle
+import ipdb
 
-class read_skeleton_file_from_NTU():
-    def __init__(self, train = True, cross_subject = True, cross_view = False):
-        self.skeletonfile_path = 'D:/NTU_RGB/nturgbd_skeletons/nturgb+d_skeletons/'
-        self.save_path = 'D:/NTU_RGB/nturgbd_skeletons/save/'
-        self.train = train
-        self.cross_subject = cross_subject
-        self.cross_view = cross_view
-        self.cross_subject_train = []
-        self.cross_subject_test = []
-        self.cross_view_train = []
-        self.cross_view_test = []
-        self.cross_subject_train_index = [1, 2, 4, 5, 8, 9, 13, 14, 15, 16, 17, 18, 19, 25, 27, 28, 31, 34, 35, 38]
-        self.cross_subject_test_index = [3, 6, 7, 10, 11, 12, 20, 21, 22, 23, 24, 26, 29, 30, 32, 33, 36, 37, 39, 40]
-        self.cross_view_train_index = [2, 3]
-        self.cross_view_test_index = [1]
-
-        file_list = os.listdir(self.save_path)
-        for i, file_name in enumerate(file_list):
-            f_name = os.path.splitext(file_name)[0]
-            self.load_cross_subject_data(f_name)
-            self.load_cross_view_data(f_name)
-
-    def load_cross_subject_data(self, file_name):
-        subject_index = int(file_name.split('P')[1].split('R')[0])
-        if subject_index in self.cross_subject_train_index:
-            print('load cross subject train data %s' % file_name)
-            self.cross_subject_train.append(self.save_path + file_name + '.pk')
-        elif subject_index in self.cross_subject_test_index:
-            print('load cross subject test data %s' % file_name)
-            self.cross_subject_test.append(self.save_path + file_name + '.pk')
-
-    def load_cross_view_data(self, file_name):
-        view_index = int(file_name.split('C')[1].split('P')[0])
-        if view_index in self.cross_view_train_index:
-            print('load cross view train data %s' % file_name)
-            self.cross_view_train.append(self.save_path + file_name + '.pk')
-        elif view_index in self.cross_view_test_index:
-            print('load cross view test data %s' % file_name)
-            self.cross_view_test.append(self.save_path + file_name + '.pk')
+class save_skeleton_data_from_NTU():
+    def __init__(self):
+        self.skeletondata_path = 'D:/NTU_RGB/nturgbd_skeletons/nturgb+d_skeletons/'
+        self.save_path = 'D:/NTU_RGB/nturgbd_skeletons/single/'
+        data_list = os.listdir(self.skeletondata_path)
+        for i, data_file in enumerate(data_list):
+            data = self.load_skeleton_data(data_file)
+            with open(self.save_path + data_file, 'wb') as f:
+                pickle.dump(data, f)
+            del data
 
     def load_skeleton_data(self, file_name):
         truthlabel = (int(file_name.split('.')[0].split('A')[1]))
-        file = pd.read_table(self.skeletonfile_path + file_name, header=None)
+        file = pd.read_table(self.skeletondata_path + file_name, header=None)
         file_iters = iter(file[0])
 
         frame_count = int(next(file_iters))
@@ -101,9 +73,50 @@ class read_skeleton_file_from_NTU():
         return skeleton_data, truthlabel
 
 
+class read_skeleton_file_from_NTU():
+    def __init__(self, train = True, cross_subject = True, cross_view = False):
+        self.save_path = 'D:/NTU_RGB/nturgbd_skeletons/single/'
+        self.train = train
+        self.cross_subject = cross_subject
+        self.cross_view = cross_view
+        self.cross_subject_train = []
+        self.cross_subject_test = []
+        self.cross_view_train = []
+        self.cross_view_test = []
+        self.cross_subject_train_index = [1, 2, 4, 5, 8, 9, 13, 14, 15, 16, 17, 18, 19, 25, 27, 28, 31, 34, 35, 38]
+        self.cross_subject_test_index = [3, 6, 7, 10, 11, 12, 20, 21, 22, 23, 24, 26, 29, 30, 32, 33, 36, 37, 39, 40]
+        self.cross_view_train_index = [2, 3]
+        self.cross_view_test_index = [1]
+
+        file_list = os.listdir(self.save_path)
+        for i, file_name in enumerate(file_list):
+            f_name = os.path.splitext(file_name)[0]
+            self.load_cross_subject_data(f_name)
+            self.load_cross_view_data(f_name)
+
+    def load_cross_subject_data(self, file_name):
+        subject_index = int(file_name.split('P')[1].split('R')[0])
+        if subject_index in self.cross_subject_train_index:
+            print('load cross subject train data %s' % file_name)
+            self.cross_subject_train.append(self.save_path + file_name + '.pk')
+        elif subject_index in self.cross_subject_test_index:
+            print('load cross subject test data %s' % file_name)
+            self.cross_subject_test.append(self.save_path + file_name + '.pk')
+
+    def load_cross_view_data(self, file_name):
+        view_index = int(file_name.split('C')[1].split('P')[0])
+        if view_index in self.cross_view_train_index:
+            print('load cross view train data %s' % file_name)
+            self.cross_view_train.append(self.save_path + file_name + '.pk')
+        elif view_index in self.cross_view_test_index:
+            print('load cross view test data %s' % file_name)
+            self.cross_view_test.append(self.save_path + file_name + '.pk')
+
+
 class NTUDataSet(data.Dataset):
     def __init__(self, train = True, cross_subject = True, cross_view = False):
-        with open('NTUdata.pk', 'rb') as f:
+        super(NTUDataSet, self).__init__()
+        with open('NTUdataSingle.pk', 'rb') as f:
             self.data = pickle.load(f)
         self.data.train = train
         self.data.cross_subject = cross_subject
@@ -129,7 +142,7 @@ class NTUDataSet(data.Dataset):
         skeleton_data, target = data
 
         frame_count = len(skeleton_data)
-        clip_length = int(frame_count / 8)
+        clip_length = int(np.rint(frame_count / 8))
         chosen_frame = []
         for i in range(7):
             rand_index = np.random.randint(0, clip_length-1)
@@ -139,15 +152,23 @@ class NTUDataSet(data.Dataset):
 
         output_joints = []
         for i in range(8):
-            joint = torch.Tensor(np.zeros(3*25*2))
+            joint = np.zeros((25*3))
             for b in range(len(chosen_frame[i])):
-                for j, value in enumerate(chosen_frame[i][b]['joints']):
+                if chosen_frame[i][b]['trackingState'] == '0':
+                    continue
+                for j, value in chosen_frame[i][b]['joints'].items():
                     joint[b*3*25+3*j] = value['x']
                     joint[b*3*25+3*j+1] = value['y']
-                    joint[b*3*25+3*j+2] = value['z']
+                    joint[b*3*25 + 3*j+2] = value['z']
+                new_origin = np.array([joint[3], joint[4], joint[5]])
+                new_axisx = np.array([joint[24], joint[25], joint[26]]) - np.array([joint[12], joint[13], joint[14]])
+                new_axisx = new_axisx / np.linalg.norm(new_axisx, ord=2)
+                new_axisy = np.array([joint[0], joint[1], joint[2]]) - np.array([joint[60], joint[61], joint[62]])
+                new_axisy = new_axisy / np.linalg.norm(new_axisy, ord=2)
+                new_axisz = np.cross(new_axisx, new_axisy)
+                joint = normalize_rotate(new_axisx, new_axisy, new_axisz, new_origin, joint)
             output_joints.append(joint)
-
-        return output_joints, target
+        return torch.Tensor(output_joints), target
 
     def __len__(self):
         if self.data.train:
@@ -162,7 +183,13 @@ class NTUDataSet(data.Dataset):
                 return len(self.data.cross_view_test)
 
 
-ntudata = NTUDataSet()
-train_loader = data.DataLoader(dataset=ntudata, batch_size=256, shuffle=True)
-for data in train_loader:
-    pass
+def normalize_rotate(new_axisx, new_axisy, new_axisz, new_origin, input):
+    output = np.zeros(input.shape)
+    for i in range(24):
+        vec = input[i*3:(i+1)*3] - new_origin
+        output[i*3] = np.dot(vec, new_axisx.T) / np.sqrt(new_axisx.dot(new_axisx))
+        output[i*3+1] = np.dot(vec, new_axisy.T) / np.sqrt(new_axisy.dot(new_axisy))
+        output[i*3+2] = np.dot(vec, new_axisz.T) / np.sqrt(new_axisz.dot(new_axisz))
+
+    return output
+
